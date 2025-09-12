@@ -19,7 +19,8 @@
   </style>
 </head>
 <body>
-  <video id="player"></video>
+  <!-- 最初はmuted + playsinline を必ず付ける -->
+  <video id="player" muted playsinline></video>
 
   <script>
     const video = document.getElementById("player");
@@ -45,7 +46,9 @@
 
     function playVideo(filename) {
       video.src = filename;
-      video.play();
+      video.play().catch(err => {
+        console.error("再生エラー:", err);
+      });
       nextChoice = null;
     }
 
@@ -54,6 +57,7 @@
       if (!started && e.code === "Space") {
         // スペースキーで最初の動画を開始
         started = true;
+        video.muted = false; // 音を有効化
         playVideo("https://moriwakiren-fucc.github.io/kyuyusai/0.mov");
       } else if (e.key === "ArrowLeft" || e.key === "l" || e.key === "L") {
         nextChoice = "L";
