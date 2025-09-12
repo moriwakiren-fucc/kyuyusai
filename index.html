@@ -26,15 +26,15 @@
 
     // 動画の遷移ルールを定義
     const transitions = {
-      "0.mp4": { L: "1_L.mp4", A: "1_R.mp4" },
-      "1_L.mp4": { L: "2_L.mp4", A: "2_R.mp4" },
-      "2_R.mp4": { L: "3_L.mp4", A: "3_R.mp4" }
+      "0.mp4": { L: "./1_L.mp4", A: "./1_R.mp4" },
+      "1_L.mp4": { L: "./2_L.mp4", A: "./2_R.mp4" },
+      "2_R.mp4": { L: "./3_L.mp4", A: "./3_R.mp4" }
     };
 
     let nextChoice = null; // 押されたキーを記録する
 
     // 最初の動画をロード
-    playVideo("0.mp4");
+    playVideo("./0.mp4");
 
     function playVideo(filename) {
       video.src = filename;
