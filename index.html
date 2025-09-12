@@ -14,39 +14,40 @@
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: cover; /* 全画面にフィット */
     }
   </style>
 </head>
 <body>
-  <!-- 最初は黒画面で待機。muted playsinlineを付けて自動再生許可 -->
+  <!-- 最初は黒画面。muted + playsinline はブラウザの再生規制回避用 -->
   <video id="player" muted playsinline></video>
 
   <script>
     const video = document.getElementById("player");
 
-    // 遷移ルールをファイル名だけで記述
+    // 遷移ルールをファイル名で定義
     const transitions = {
       "0.mp4": { L: "1_L.mp4", A: "1_R.mp4" },
       "1_L.mp4": { L: "2_L.mp4", A: "2_R.mp4" },
       "2_R.mp4": { L: "3_L.mp4", A: "3_R.mp4" }
     };
 
-    let nextChoice = null; // 押されたキーを記録
+    let nextChoice = null; // キー入力を記録
     let started = false;   // スペースキーで開始したかどうか
 
+    // 動画を再生する関数
     function playVideo(filename) {
-      video.src = filename;      // 同じフォルダにある動画ファイルを指定
+      video.src = filename;      // 同じフォルダの動画を読み込み
       video.play().catch(err => {
         console.error("再生エラー:", err);
       });
       nextChoice = null;
     }
 
-    // キー入力を記録
+    // キー入力
     window.addEventListener("keydown", (e) => {
       if (!started && e.code === "Space") {
-        // スペースキーで最初の動画を開始
+        // スペースキーで最初の動画開始
         started = true;
         video.muted = false; // 音を有効化
         playVideo("0.mp4");
@@ -57,7 +58,7 @@
       }
     });
 
-    // 動画が終わった瞬間に次を再生
+    // 動画終了時の処理
     video.addEventListener("ended", () => {
       const filename = video.src.split("/").pop(); // ファイル名だけ取り出す
       const rule = transitions[filename];
@@ -68,3 +69,4 @@
   </script>
 </body>
 </html>
+
