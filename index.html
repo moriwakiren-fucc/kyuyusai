@@ -14,38 +14,29 @@
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* 画面いっぱいに表示 */
+      object-fit: cover;
     }
   </style>
 </head>
 <body>
-  <!-- 最初はmuted + playsinline を必ず付ける -->
+  <!-- 最初は黒画面で待機。muted playsinlineを付けて自動再生許可 -->
   <video id="player" muted playsinline></video>
 
   <script>
     const video = document.getElementById("player");
 
-    // 動画の遷移ルール（フルURLで統一）
+    // 遷移ルールをファイル名だけで記述
     const transitions = {
-      "https://moriwakiren-fucc.github.io/kyuyusai/0.mov": { 
-        L: "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov", 
-        A: "https://moriwakiren-fucc.github.io/kyuyusai/1_R.mov" 
-      },
-      "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov": { 
-        L: "https://moriwakiren-fucc.github.io/kyuyusai/2_L.mp4", 
-        A: "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov" 
-      },
-      "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov": { 
-        L: "https://moriwakiren-fucc.github.io/kyuyusai/3_L.mov", 
-        A: "https://moriwakiren-fucc.github.io/kyuyusai/3_R.mp4" 
-      }
+      "0.mp4": { L: "1_L.mp4", A: "1_R.mp4" },
+      "1_L.mp4": { L: "2_L.mp4", A: "2_R.mp4" },
+      "2_R.mp4": { L: "3_L.mp4", A: "3_R.mp4" }
     };
 
-    let nextChoice = null; // 押されたキーを記録する
+    let nextChoice = null; // 押されたキーを記録
     let started = false;   // スペースキーで開始したかどうか
 
     function playVideo(filename) {
-      video.src = filename;
+      video.src = filename;      // 同じフォルダにある動画ファイルを指定
       video.play().catch(err => {
         console.error("再生エラー:", err);
       });
@@ -58,7 +49,7 @@
         // スペースキーで最初の動画を開始
         started = true;
         video.muted = false; // 音を有効化
-        playVideo("https://moriwakiren-fucc.github.io/kyuyusai/0.mov");
+        playVideo("0.mp4");
       } else if (e.key === "ArrowLeft" || e.key === "l" || e.key === "L") {
         nextChoice = "L";
       } else if (e.key === "ArrowRight" || e.key === "a" || e.key === "A") {
@@ -68,7 +59,8 @@
 
     // 動画が終わった瞬間に次を再生
     video.addEventListener("ended", () => {
-      const rule = transitions[video.src];
+      const filename = video.src.split("/").pop(); // ファイル名だけ取り出す
+      const rule = transitions[filename];
       if (rule && nextChoice && rule[nextChoice]) {
         playVideo(rule[nextChoice]);
       }
