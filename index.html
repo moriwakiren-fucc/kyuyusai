@@ -19,22 +19,29 @@
   </style>
 </head>
 <body>
-  <video id="player" autoplay></video>
+  <video id="player"></video>
 
   <script>
     const video = document.getElementById("player");
 
-    // 動画の遷移ルールを定義
+    // 動画の遷移ルール（フルURLで統一）
     const transitions = {
-      "https://moriwakiren-fucc.github.io/kyuyusai/0.mov": { L: "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov", A: "https://moriwakiren-fucc.github.io/kyuyusai/1_R.mov" },
-      "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov": { L: "https://moriwakiren-fucc.github.io/kyuyusai/2_L.mp4", A: "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov" },
-      "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov": { L: "https://moriwakiren-fucc.github.io/kyuyusai/3_L.mov", A: "https://moriwakiren-fucc.github.io/kyuyusai/3_R.mp4" }
+      "https://moriwakiren-fucc.github.io/kyuyusai/0.mov": { 
+        L: "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov", 
+        A: "https://moriwakiren-fucc.github.io/kyuyusai/1_R.mov" 
+      },
+      "https://moriwakiren-fucc.github.io/kyuyusai/1_L.mov": { 
+        L: "https://moriwakiren-fucc.github.io/kyuyusai/2_L.mp4", 
+        A: "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov" 
+      },
+      "https://moriwakiren-fucc.github.io/kyuyusai/2_R.mov": { 
+        L: "https://moriwakiren-fucc.github.io/kyuyusai/3_L.mov", 
+        A: "https://moriwakiren-fucc.github.io/kyuyusai/3_R.mp4" 
+      }
     };
 
     let nextChoice = null; // 押されたキーを記録する
-
-    // 最初の動画をロード
-    playVideo("https://moriwakiren-fucc.github.io/kyuyusai/0.mov");
+    let started = false;   // スペースキーで開始したかどうか
 
     function playVideo(filename) {
       video.src = filename;
@@ -44,7 +51,11 @@
 
     // キー入力を記録
     window.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft" || e.key === "l" || e.key === "L") {
+      if (!started && e.code === "Space") {
+        // スペースキーで最初の動画を開始
+        started = true;
+        playVideo("https://moriwakiren-fucc.github.io/kyuyusai/0.mov");
+      } else if (e.key === "ArrowLeft" || e.key === "l" || e.key === "L") {
         nextChoice = "L";
       } else if (e.key === "ArrowRight" || e.key === "a" || e.key === "A") {
         nextChoice = "A";
@@ -53,7 +64,7 @@
 
     // 動画が終わった瞬間に次を再生
     video.addEventListener("ended", () => {
-      const rule = transitions[video.src.split("/").pop()];
+      const rule = transitions[video.src];
       if (rule && nextChoice && rule[nextChoice]) {
         playVideo(rule[nextChoice]);
       }
@@ -61,4 +72,3 @@
   </script>
 </body>
 </html>
-
