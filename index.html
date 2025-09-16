@@ -1,4 +1,3 @@
-あなた:
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -28,8 +27,8 @@
     const video = document.getElementById("video");
 
     // キーグループ
-    const leftKeys  = ["q","w","a","s","z","x","e","d","c","r","f","v"];
-    const rightKeys = ["p","o",";","l",".",",","@","[",":","]","/","\"];
+    const leftKeys  = ["q","w","a","s","z","x"];
+    const rightKeys = ["p","o","+","l","?",">"];
     const backSequence = ["1","2","3","4","5","6","7","8","9","0"];
     let backProgress = 0;
 
@@ -47,7 +46,7 @@
       "3lf.mp4": "3rc.mp4",
     };
 
-    // 初期動画（音声は自動再生制限のため muted）
+    // 初期動画
     playVideo("00opening.mp4");
 
     function playVideo(src) {
@@ -57,7 +56,7 @@
       nextVideo = null;
     }
 
-    // 分岐ルール
+    // 通常分岐ルール
     function decideNext(branch) {
       const current = video.src;
 
@@ -77,12 +76,10 @@
     document.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
 
-      // spaceキー：00opening 再生中なら即 01gamestart に飛ぶ
+      // space → ミュート解除して即切り替え
       if (key === " ") {
-        if (video.src.includes("00opening.mp4")) {
-          video.muted = false;  // ユーザー操作の瞬間なので音声再生可
-          playVideo("01gamestart.mp4");
-        }
+        video.muted = false;
+        playVideo("01gamestart.mp4");
         return;
       }
 
@@ -114,9 +111,9 @@
         if (backProgress === backSequence.length) {
           const currentFile = video.src.split("/").pop();
           if (reverseMap[currentFile]) {
-            playVideo(reverseMap[currentFile]);
+            playVideo(reverseMap[currentFile]); // 相方動画へ即切り替え
           }
-          backProgress = 0;
+          backProgress = 0; // リセット
         }
       } else {
         if (backSequence.includes(key)) {
