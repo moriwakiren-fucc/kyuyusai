@@ -55,8 +55,10 @@
       nextVideo = null;
     }
 
-    // 初期はオープニングを流す
-    playVideo("00opening.mp4");
+    // 初期はオープニングを流す（muted=true）
+    video.src = "00opening.mp4";
+    video.load();
+    video.play();
 
     // 分岐ルール
     function decideNext(branch) {
