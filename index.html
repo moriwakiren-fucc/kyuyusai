@@ -30,16 +30,25 @@
     const leftKeys  = ["q","w","a","s","z","x"];
     const rightKeys = ["p","o","+","l","?",">"];
     const backSequence = ["1","2","3","4","5","6","7","8","9","0"];
-    let backProgress = 0; // 逆分岐キーの進捗
+    let backProgress = 0;
 
     // 状態管理
     let nextVideo = null;
-    let lastBranch = null; // "left" または "right"
+    let lastBranch = null; // "left" or "right"
+
+    // 逆分岐マップ
+    const reverseMap = {
+      "1rf.mp4": "1lc.mp4",
+      "1lc.mp4": "1rf.mp4",
+      "2rf.mp4": "2lc.mp4",
+      "2lc.mp4": "2rf.mp4",
+      "3rc.mp4": "3lf.mp4",
+      "3lf.mp4": "3rc.mp4",
+    };
 
     // 初期動画
     playVideo("00opening.mp4");
 
-    // 動画切り替え関数
     function playVideo(src) {
       video.src = src;
       video.load();
@@ -47,7 +56,7 @@
       nextVideo = null;
     }
 
-    // 分岐ルール
+    // 通常分岐ルール
     function decideNext(branch) {
       const current = video.src;
 
@@ -60,15 +69,6 @@
       if (current.includes("2lc.mp4")) {
         return branch === "left" ? "3lf.mp4" : "3rc.mp4";
       }
-      if (current.includes("1rf.mp4")) {
-        return branch === "left" ? "1lc.mp4" : null; // 逆分岐で戻す例
-      }
-      if (current.includes("2rf.mp4")) {
-        return branch === "left" ? "2lc.mp4" : null;
-      }
-      if (current.includes("3rc.mp4")) {
-        return branch === "left" ? "3lf.mp4" : null;
-      }
       return null;
     }
 
@@ -76,7 +76,7 @@
     document.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
 
-      // space → 即切り替え & ミュート解除
+      // space → ミュート解除して即切り替え
       if (key === " ") {
         video.muted = false;
         playVideo("01gamestart.mp4");
@@ -91,7 +91,7 @@
           else nextVideo = nv;
           lastBranch = "left";
         }
-        backProgress = 0; // シーケンスリセット
+        backProgress = 0;
       }
 
       // 右分岐
@@ -102,30 +102,26 @@
           else nextVideo = nv;
           lastBranch = "right";
         }
-        backProgress = 0; // シーケンスリセット
+        backProgress = 0;
       }
 
       // 逆分岐シーケンス
       if (key === backSequence[backProgress]) {
         backProgress++;
-        if (backProgress === backSequence.length && lastBranch) {
-          const opposite = lastBranch === "left" ? "right" : "left";
-          const nv = decideNext(opposite);
-          if (nv) {
-            playVideo(nv);  // 今の動画を即中断して切り替え
-            lastBranch = opposite;
+        if (backProgress === backSequence.length) {
+          const currentFile = video.src.split("/").pop();
+          if (reverseMap[currentFile]) {
+            playVideo(reverseMap[currentFile]); // 相方動画へ即切り替え
           }
-          backProgress = 0; // 成功したらリセット
+          backProgress = 0; // リセット
         }
       } else {
-        // 間違えたらリセット
         if (backSequence.includes(key)) {
-          backProgress = 0;
+          backProgress = 0; // 間違えたらリセット
         }
       }
     });
 
-    // 動画終了イベント → 予約があれば再生
     video.addEventListener("ended", () => {
       if (nextVideo) {
         playVideo(nextVideo);
