@@ -2,112 +2,175 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>EXPO RIDE 2-7</title>
+  <title>Video Branching</title>
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-      background: black;
-      overflow: hidden;
-    }
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+    /* 画面いっぱいに動画を表示する最低限のスタイル */
+    html, body { margin:0; padding:0; height:100%; width:100%; background:black; overflow:hidden; }
+    video { width:100%; height:100%; object-fit:cover; display:block; background:black; }
   </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline></video>
+  <!-- 初期は自動再生（ただし muted にしてブラウザの制限を回避） -->
+  <video id="player" autoplay muted playsinline></video>
 
   <script>
-    const video = document.getElementById("video");
+    const video = document.getElementById("player");
 
-    // キーグループ
+    // キーグループ（小文字で判定）
     const leftKeys  = ["q","w","a","s","z","x"];
-    const rightKeys = ["p","o","+","l","?",">"];
-    const backKeys  = ["1","2","3","4","5","6","7","8","9","0"];
+    const rightKeys = ["p","o","+","l","?"," >".trim()]; // '>' を含める
+    const digitSeq  = ["1","2","3","4","5","6","7","8","9","0"];
 
-    // 状態管理
-    let nextVideo = null;
-    let lastBranch = null; // "left" または "right"
+    // 分岐ルール（ファイル名は同フォルダ内）
+    const transitions = {
+      "01gamestart.mp4": { left: "1lc.mp4", right: "1rf.mp4" },
+      "1lc.mp4":         { left: "2lc.mp4", right: "2rf.mp4" },
+      "2lc.mp4":         { left: "3lf.mp4", right: "3rc.mp4" }
+      // 必要ならここにさらに追加してください
+    };
 
-    // 初期動画
+    // 同レベルの左右対応（逆分岐で即切り替えるため）
+    const counterparts = {
+      "1rf.mp4": "1lc.mp4",
+      "1lc.mp4": "1rf.mp4",
+      "2rf.mp4": "2lc.mp4",
+      "2lc.mp4": "2rf.mp4",
+      "3rc.mp4": "3lf.mp4",
+      "3lf.mp4": "3rc.mp4"
+    };
+
+    let nextVideo = null;       // 再生終了時に再生する予約（通常分岐）
+    let lastBranch = null;      // "left" または "right"（直近で選択した分岐）
+    let seqIndex = 0;           // digitSeq の現在の進捗（0..10）
+    let reverseUnlocked = false;// true のとき逆分岐（即中断切替）が有効
+
+    // ページ読み込み時にほぼ同時に opening を再生
     playVideo("00opening.mp4");
 
-    // 動画を切り替える関数
-    function playVideo(src) {
-      video.src = src;
+    // 再生関数（通常の再生・予約解除）
+    function playVideo(filename) {
+      video.src = filename;
+      video.currentTime = 0;
       video.load();
-      video.play();
-      nextVideo = null; // 次の予約をリセット
+      video.play().catch(err => console.warn("play()ブロック:", err));
+      nextVideo = null;
     }
 
-    // 分岐処理
+    // 即中断して切り替える（現在の再生を止めて即再生）
+    function playImmediate(filename) {
+      try {
+        video.pause();
+      } catch(e){}
+      video.src = filename;
+      video.currentTime = 0;
+      video.load();
+      video.play().catch(err => console.warn("即再生でplay()ブロック:", err));
+      nextVideo = null;
+    }
+
+    // 現在の動画と分岐（left/right）から遷移先を返す
     function decideNext(branch) {
-      const current = video.src;
-
-      if (current.includes("01gamestart.mp4")) {
-        return branch === "left" ? "1lc.mp4" : "1rf.mp4";
-      }
-      if (current.includes("1lc.mp4")) {
-        return branch === "left" ? "2lc.mp4" : "2rf.mp4";
-      }
-      if (current.includes("2lc.mp4")) {
-        return branch === "left" ? "3lf.mp4" : "3rc.mp4";
-      }
-      return null; // これ以上進まない
+      const cur = (video.src || "").split("/").pop();
+      const map = transitions[cur];
+      if (map && map[branch]) return map[branch];
+      return null;
     }
 
-    // キー入力
-    document.addEventListener("keydown", (e) => {
-      const key = e.key.toLowerCase();
+    // 現在の動画に左右の対応があれば返す（逆分岐用）
+    function getCounterpart() {
+      const cur = (video.src || "").split("/").pop();
+      return counterparts[cur] || null;
+    }
 
-      // space → 即切り替え
-      if (key === " ") {
-        playVideo("01gamestart.mp4");
+    // digit sequence を処理（連続で 1→2→...→0 を踏めば unlock）
+    function handleDigitKey(d) {
+      if (d === digitSeq[seqIndex]) {
+        seqIndex++;
+        if (seqIndex === digitSeq.length) {
+          reverseUnlocked = true;
+          seqIndex = 0;
+          console.log("逆分岐モードを解除（有効）");
+        }
+      } else {
+        // 間違った場合はリセット。ただし '1' が押された場合は index=1 にする（連続再スタート）
+        seqIndex = (d === digitSeq[0]) ? 1 : 0;
+      }
+    }
+
+    // キー入力ハンドラ
+    document.addEventListener("keydown", (e) => {
+      const raw = e.key;
+      const key = String(raw).toLowerCase();
+
+      // Space: opening を中断してゲーム開始
+      if (e.code === "Space" || key === " ") {
+        // ユーザー操作があったので音ありに切り替える
+        video.muted = false;
+        playImmediate("01gamestart.mp4");
         return;
       }
 
-      // 左分岐
+      // Digit sequence の判定（'1'..'9','0'）
+      if (/^[0-9]$/.test(key)) {
+        handleDigitKey(key);
+        return;
+      }
+
+      // 左キー群
       if (leftKeys.includes(key)) {
+        // 逆分岐モードかつ現在が右側の動画 -> 即中断で左右入れ替え
+        if (reverseUnlocked) {
+          const cp = getCounterpart();
+          if (cp && cp.includes("lc") || cp && cp.includes("lf")) {
+            playImmediate(cp);
+            reverseUnlocked = false; // 使用したらリセット
+            seqIndex = 0;
+            lastBranch = "left";
+            return;
+          }
+        }
+
+        // 通常の左分岐（予約または即再生）
         const nv = decideNext("left");
         if (nv) {
-          if (video.ended) playVideo(nv); // 終了後に押された場合は即実行
+          if (video.ended) playImmediate(nv);
           else nextVideo = nv;
           lastBranch = "left";
         }
+        return;
       }
 
-      // 右分岐
+      // 右キー群
       if (rightKeys.includes(key)) {
+        // 逆分岐モードかつ現在が左側の動画 -> 即中断で左右入れ替え
+        if (reverseUnlocked) {
+          const cp = getCounterpart();
+          if (cp && (cp.includes("rf") || cp.includes("rc"))) {
+            playImmediate(cp);
+            reverseUnlocked = false;
+            seqIndex = 0;
+            lastBranch = "right";
+            return;
+          }
+        }
+
+        // 通常の右分岐（予約または即再生）
         const nv = decideNext("right");
         if (nv) {
-          if (video.ended) playVideo(nv);
+          if (video.ended) playImmediate(nv);
           else nextVideo = nv;
           lastBranch = "right";
         }
+        return;
       }
 
-      // 戻り分岐 (逆方向)
-      if (backKeys.includes(key) && lastBranch) {
-        const opposite = lastBranch === "left" ? "right" : "left";
-        const nv = decideNext(opposite);
-        if (nv) {
-          if (video.ended) playVideo(nv);
-          else nextVideo = nv;
-          lastBranch = opposite;
-        }
-      }
+      // その他のキーは無視（必要ならここに拡張）
     });
 
-    // 動画終了イベント → 予約があれば再生
+    // 再生終了時の処理（予約があれば再生）
     video.addEventListener("ended", () => {
       if (nextVideo) {
-        playVideo(nextVideo);
+        playImmediate(nextVideo);
       }
     });
   </script>
