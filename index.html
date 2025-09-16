@@ -2,71 +2,114 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>動画分岐再生</title>
+  <title>EXPO RIDE 2-7</title>
   <style>
     body, html {
       margin: 0;
       padding: 0;
       height: 100%;
+      width: 100%;
       background: black;
       overflow: hidden;
     }
     video {
       width: 100%;
       height: 100%;
-      object-fit: cover; /* 全画面にフィット */
+      object-fit: cover;
+      display: block;
     }
   </style>
 </head>
 <body>
-  <!-- 最初は黒画面。muted + playsinline はブラウザの再生規制回避用 -->
-  <video id="player" muted playsinline></video>
+  <video id="video" autoplay playsinline></video>
 
   <script>
-    const video = document.getElementById("player");
+    const video = document.getElementById("video");
 
-    // 遷移ルールをファイル名で定義
-    const transitions = {
-      "0.mp4": { L: "1_L.mp4", A: "1_R.mp4" },
-      "1_L.mp4": { L: "2_L.mp4", A: "2_R.mp4" },
-      "2_R.mp4": { L: "3_L.mp4", A: "3_R.mp4" }
-    };
+    // キーグループ
+    const leftKeys  = ["q","w","a","s","z","x"];
+    const rightKeys = ["p","o","+","l","?",">"];
+    const backKeys  = ["1","2","3","4","5","6","7","8","9","0"];
 
-    let nextChoice = null; // キー入力を記録
-    let started = false;   // スペースキーで開始したかどうか
+    // 状態管理
+    let nextVideo = null;
+    let lastBranch = null; // "left" または "right"
 
-    // 動画を再生する関数
-    function playVideo(filename) {
-      video.src = filename;      // 同じフォルダの動画を読み込み
-      video.play().catch(err => {
-        console.error("再生エラー:", err);
-      });
-      nextChoice = null;
+    // 初期動画
+    playVideo("00opening.mp4");
+
+    // 動画を切り替える関数
+    function playVideo(src) {
+      video.src = src;
+      video.load();
+      video.play();
+      nextVideo = null; // 次の予約をリセット
+    }
+
+    // 分岐処理
+    function decideNext(branch) {
+      const current = video.src;
+
+      if (current.includes("01gamestart.mp4")) {
+        return branch === "left" ? "1lc.mp4" : "1rf.mp4";
+      }
+      if (current.includes("1lc.mp4")) {
+        return branch === "left" ? "2lc.mp4" : "2rf.mp4";
+      }
+      if (current.includes("2lc.mp4")) {
+        return branch === "left" ? "3lf.mp4" : "3rc.mp4";
+      }
+      return null; // これ以上進まない
     }
 
     // キー入力
-    window.addEventListener("keydown", (e) => {
-      if (!started && e.code === "Space") {
-        // スペースキーで最初の動画開始
-        started = true;
-        video.muted = false; // 音を有効化
-        playVideo("0.mp4");
-      } else if (e.key === "ArrowLeft" || e.key === "l" || e.key === "L") {
-        nextChoice = "L";
-      } else if (e.key === "ArrowRight" || e.key === "a" || e.key === "A") {
-        nextChoice = "A";
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+
+      // space → 即切り替え
+      if (key === " ") {
+        playVideo("01gamestart.mp4");
+        return;
+      }
+
+      // 左分岐
+      if (leftKeys.includes(key)) {
+        const nv = decideNext("left");
+        if (nv) {
+          if (video.ended) playVideo(nv); // 終了後に押された場合は即実行
+          else nextVideo = nv;
+          lastBranch = "left";
+        }
+      }
+
+      // 右分岐
+      if (rightKeys.includes(key)) {
+        const nv = decideNext("right");
+        if (nv) {
+          if (video.ended) playVideo(nv);
+          else nextVideo = nv;
+          lastBranch = "right";
+        }
+      }
+
+      // 戻り分岐 (逆方向)
+      if (backKeys.includes(key) && lastBranch) {
+        const opposite = lastBranch === "left" ? "right" : "left";
+        const nv = decideNext(opposite);
+        if (nv) {
+          if (video.ended) playVideo(nv);
+          else nextVideo = nv;
+          lastBranch = opposite;
+        }
       }
     });
 
-    // 動画終了時の処理
+    // 動画終了イベント → 予約があれば再生
     video.addEventListener("ended", () => {
-      const filename = video.src.split("/").pop(); // ファイル名だけ取り出す
-      const rule = transitions[filename];
-      if (rule && nextChoice && rule[nextChoice]) {
-        playVideo(rule[nextChoice]);
+      if (nextVideo) {
+        playVideo(nextVideo);
       }
     });
   </script>
 </body>
 </html>
-
