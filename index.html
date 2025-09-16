@@ -46,15 +46,17 @@
       "3lf.mp4": "3rc.mp4",
     };
 
-    // 初期動画（音声は自動再生制限のため muted）
-    playVideo("00opening.mp4");
-
-    function playVideo(src) {
+    // 再生関数
+    function playVideo(src, unmute=false) {
       video.src = src;
       video.load();
+      if (unmute) video.muted = false;
       video.play();
       nextVideo = null;
     }
+
+    // 初期はオープニングを流す
+    playVideo("00opening.mp4");
 
     // 分岐ルール
     function decideNext(branch) {
@@ -76,11 +78,10 @@
     document.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
 
-      // spaceキー：00opening 再生中なら即 01gamestart に飛ぶ
+      // spaceキー：オープニング中なら即ゲーム開始へ
       if (key === " ") {
         if (video.src.includes("00opening.mp4")) {
-          video.muted = false;  // ユーザー操作の瞬間なので音声再生可
-          playVideo("01gamestart.mp4");
+          playVideo("01gamestart.mp4", true); // 音声ONでゲーム開始
         }
         return;
       }
@@ -113,7 +114,7 @@
         if (backProgress === backSequence.length) {
           const currentFile = video.src.split("/").pop();
           if (reverseMap[currentFile]) {
-            playVideo(reverseMap[currentFile]);
+            playVideo(reverseMap[currentFile], true);
           }
           backProgress = 0;
         }
@@ -124,9 +125,10 @@
       }
     });
 
+    // 動画終了時に次を再生
     video.addEventListener("ended", () => {
       if (nextVideo) {
-        playVideo(nextVideo);
+        playVideo(nextVideo, true);
       }
     });
   </script>
