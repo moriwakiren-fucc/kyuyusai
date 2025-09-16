@@ -46,7 +46,7 @@
       "3lf.mp4": "3rc.mp4",
     };
 
-    // 初期動画
+    // 初期動画（音声は自動再生制限のため muted）
     playVideo("00opening.mp4");
 
     function playVideo(src) {
@@ -56,7 +56,7 @@
       nextVideo = null;
     }
 
-    // 通常分岐ルール
+    // 分岐ルール
     function decideNext(branch) {
       const current = video.src;
 
@@ -76,10 +76,12 @@
     document.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
 
-      // space → ミュート解除して即切り替え
+      // spaceキー：00opening 再生中なら即 01gamestart に飛ぶ
       if (key === " ") {
-        video.muted = false;
-        playVideo("01gamestart.mp4");
+        if (video.src.includes("00opening.mp4")) {
+          video.muted = false;  // ユーザー操作の瞬間なので音声再生可
+          playVideo("01gamestart.mp4");
+        }
         return;
       }
 
@@ -111,9 +113,9 @@
         if (backProgress === backSequence.length) {
           const currentFile = video.src.split("/").pop();
           if (reverseMap[currentFile]) {
-            playVideo(reverseMap[currentFile]); // 相方動画へ即切り替え
+            playVideo(reverseMap[currentFile]);
           }
-          backProgress = 0; // リセット
+          backProgress = 0;
         }
       } else {
         if (backSequence.includes(key)) {
