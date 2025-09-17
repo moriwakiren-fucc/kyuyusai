@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>EXPO RIDE🖖2-7</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: black;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+
+  <script>
+    const video = document.getElementById("video");
+
+    // キーグループ
+    const leftKeys  = ["q","w","a","s","z","x","e","d","c","r","f","v"];
+    const rightKeys = ["p","o",";","l",".",",","@","[",":","]","/","\""];
+    const backSequence = ["1","2","3","4","5","6","7","8","9","0"];
+    let backProgress = 0;
+
+    // 状態管理
+    let nextVideo = null;
+    let lastBranch = null; // "left" or "right"
+    let finishedAll = false; // 全動画終了フラグ
+
+    // 逆分岐マップ
+    const reverseMap = {
+      "1rf.mp4": "1lc.mp4",
+      "1lc.mp4": "1rf.mp4",
+      "2rf.mp4": "2lc.mp4",
+      "2lc.mp4": "2rf.mp4",
+      "3rc.mp4": "3lf.mp4",
+      "3lf.mp4": "3rc.mp4",
+    };
+
+    // 再生関数
+    function playVideo(src, unmute=false) {
+      video.src = src;
+      video.load();
+      if (unmute) video.muted = false;
+      video.play();
+      nextVideo = null;
+    }
+
+    // 初期はオープニング（muted=true）
+    playVideo("00opening.mp4");
+
+    // 分岐ルール
+    function decideNext(branch) {
+      const current = video.src;
+
+      if (current.includes("01gamestart.mp4")) {
+        return branch === "left" ? "1lc.mp4" : "1rf.mp4";
+      }
+      if (current.includes("1lc.mp4")) {
+        return branch === "left" ? "2lc.mp4" : "2rf.mp4";
+      }
+      if (current.includes("2lc.mp4")) {
+        return branch === "left" ? "3lf.mp4" : "3rc.mp4";
+      }
+      return null;
+    }
+
+    // キー入力
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+
+      // Enterキー：全動画終了後に再スタート
+      if (key === "enter" && finishedAll) {
+        finishedAll = false;
+        playVideo("00opening.mp4", false); // 音声ONでオープニング
+        return;
+      }
+
+      // spaceキー：オープニング中なら即ゲーム開始へ
+      if (key === " ") {
+        if (video.src.includes("00opening.mp4")) {
+          playVideo("01gamestart.mp4", true); // 音声ONでゲーム開始
+        }
+        return;
+      }
+
+      // 左分岐
+      if (leftKeys.includes(key)) {
+        const nv = decideNext("left");
+        if (nv) {
+          if (video.ended) playVideo(nv);
+          else nextVideo = nv;
+          lastBranch = "left";
+        }
+        backProgress = 0;
+      }
+
+      // 右分岐
+      if (rightKeys.includes(key)) {
+        const nv = decideNext("right");
+        if (nv) {
+          if (video.ended) playVideo(nv);
+          else nextVideo = nv;
+          lastBranch = "right";
+        }
+        backProgress = 0;
+      }
+
+      // 逆分岐シーケンス
+      if (key === backSequence[backProgress]) {
+        backProgress++;
+        if (backProgress === backSequence.length) {
+          const currentFile = video.src.split("/").pop();
+          if (reverseMap[currentFile]) {
+            playVideo(reverseMap[currentFile], true);
+          }
+          backProgress = 0;
+        }
+      } else {
+        if (backSequence.includes(key)) {
+          backProgress = 0; // 間違えたらリセット
+        }
+      }
+    });
+
+    // 動画終了時
+    video.addEventListener("ended", () => {
+      if (nextVideo) {
+        playVideo(nextVideo, true);
+      } else {
+        // 全動画が終了したら再スタート可能
+        finishedAll = true;
+      }
+    });
+  </script>
+</body>
+</html>
